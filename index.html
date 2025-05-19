@@ -8,17 +8,17 @@
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://yourdomain.com/">
+    <meta property="og:url" content="https://cloud-vcf.vercel.app/">
     <meta property="og:title" content="VCF Contact Creator | Share Your Contact Easily">
     <meta property="og:description" content="Create and share your contact card instantly. Generate a VCF file with one click.">
-    <meta property="og:image" content="https://yourdomain.com/images/social-preview.jpg">
+    <meta property="og:image" content="https://cloud-vcf.vercel.app/images/social-preview.jpg">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://yourdomain.com/">
+    <meta property="twitter:url" content="https://cloud-vcf.vercel.app/">
     <meta property="twitter:title" content="VCF Contact Creator | Share Your Contact Easily">
     <meta property="twitter:description" content="Create and share your contact card instantly. Generate a VCF file with one click.">
-    <meta property="twitter:image" content="https://yourdomain.com/images/social-preview.jpg">
+    <meta property="twitter:image" content="https://cloud-vcf.vercel.app/images/social-preview.jpg">
 
     <!-- Favicon -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -279,7 +279,7 @@
         
         .copy-btn {
             position: absolute;
-            top: 10px;
+            top: 50px;
             right: 10px;
             background: rgba(255, 255, 255, 0.1);
             border: none;
@@ -366,7 +366,7 @@
                     </select>
                 </div>
                 
-                <button type="submit" class="btn">Create Session</button>
+                <button type="submit" class="btn" id="createSessionBtn">Create Session</button>
             </form>
         </div>
         
@@ -377,7 +377,7 @@
             
             <div class="session-link">
                 <span id="sessionLink"></span>
-                <button class="copy-btn" onclick="copySessionLink()">Copy</button>
+                <button class="copy-btn" id="copyLinkBtn">Copy</button>
             </div>
             
             <div class="loader" id="sessionLoader"></div>
@@ -391,7 +391,7 @@
             
             <div id="whatsappContainer" style="display: none;">
                 <a href="#" class="btn-whatsapp" id="whatsappLinkBtn" target="_blank">
-                    Join WhatsApp Group
+                    Join WhatsApp Group for file
                 </a>
             </div>
             
@@ -416,11 +416,11 @@
                             <option value="+91">+91 (IN)</option>
                             <option value="+86">+86 (CN)</option>
                         </select>
-                        <input type="tel" id="phoneNumber" required placeholder="8012345678">
+                        <input type="number" id="phoneNumber" required placeholder="8012345678">
                     </div>
                 </div>
                 
-                <button type="submit" class="btn">Add Contact</button>
+                <button type="submit" class="btn" id="addContactBtn">Add Contact</button>
             </form>
             
             <div class="member-count">
@@ -436,7 +436,7 @@
         </div>
         
         <div class="powered-by">
-            Powered by VCF Contact Creator
+            Powered by The.Zane.Nelson
         </div>
     </div>
 
@@ -460,6 +460,9 @@
         const contactForm = document.getElementById('contactForm');
         const memberCount = document.getElementById('memberCount');
         const downloadBtn = document.getElementById('downloadBtn');
+        const createSessionBtn = document.getElementById('createSessionBtn');
+        const addContactBtn = document.getElementById('addContactBtn');
+        const copyLinkBtn = document.getElementById('copyLinkBtn');
 
         // Current session data
         let currentSession = null;
@@ -480,8 +483,8 @@
                 const savedSession = localStorage.getItem('currentSession');
                 if (savedSession) {
                     currentSession = JSON.parse(savedSession);
-                    showSessionResult();
-                    initialView.style.display = 'none';
+                    // showSessionResult();
+                    initialView.style.display = 'block';
                 }
             }
             
@@ -500,17 +503,60 @@
             // Session form submission
             sessionForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                createSession();
+                if (validateSessionForm()) {
+                    createSession();
+                }
             });
             
             // Contact form submission
             contactForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                addContact();
+                if (validateContactForm()) {
+                    addContact();
+                }
             });
             
             // Download button
             downloadBtn.addEventListener('click', downloadVcf);
+            
+            // Copy link button
+            copyLinkBtn.addEventListener('click', copySessionLink);
+        }
+
+        // Validate session form
+        function validateSessionForm() {
+            const sessionName = document.getElementById('sessionName').value;
+            const sessionDuration = document.getElementById('sessionDuration').value;
+            
+            if (!sessionName.trim()) {
+                showMessage('Please enter a session name', 'error', sessionMessage);
+                return false;
+            }
+            
+            if (!sessionDuration) {
+                showMessage('Please select a session duration', 'error', sessionMessage);
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Validate contact form
+        function validateContactForm() {
+            const fullName = document.getElementById('fullName').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            
+            if (!fullName.trim()) {
+                showNotification('Please enter your full name', 'error');
+                return false;
+            }
+            
+            if (!phoneNumber.trim()) {
+                showNotification('Please enter your phone number', 'error');
+                return false;
+            }
+            
+            return true;
         }
 
         // Create a new session
@@ -578,6 +624,17 @@
             }
             
             hideLoading();
+        }
+
+        // Show session result
+        function showSessionResult() {
+            initialView.style.display = 'none';
+            sessionSetup.style.display = 'none';
+            sessionResult.style.display = 'block';
+            
+            // Generate the session link
+            const link = `${window.location.origin}${window.location.pathname}?session=${currentSession.id}`;
+            sessionLink.textContent = link;
         }
 
         // Show contact form
