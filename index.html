@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,6 +44,7 @@
             --card-bg: rgba(26, 26, 46, 0.9);
             --input-bg: rgba(255, 255, 255, 0.1);
             --transition: all 0.3s ease;
+            --whatsapp-green: #25D366;
         }
         
         * {
@@ -313,6 +317,77 @@
             color: rgba(255, 255, 255, 0.7);
         }
         
+        /* WhatsApp Floating Button */
+        .whatsapp-float {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: var(--whatsapp-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.5);
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        .whatsapp-float:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(37, 211, 102, 0.7);
+        }
+        
+        .whatsapp-float svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(37, 211, 102, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+        }
+        
+        /* Password Protection */
+        .password-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .password-box {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        /* Extend Session */
+        .extend-session {
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        /* Session Data Input */
+        .session-data-input {
+            display: none;
+            margin-top: 1rem;
+        }
+        
         /* Responsive adjustments */
         @media (max-width: 576px) {
             .container {
@@ -322,10 +397,34 @@
             h1 {
                 font-size: 1.5rem;
             }
+            
+            .whatsapp-float {
+                width: 45px;
+                height: 45px;
+                top: 15px;
+                right: 15px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- WhatsApp Floating Button -->
+    <div class="whatsapp-float" id="whatsappFloatBtn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+    </div>
+
+    <!-- Password Modal -->
+    <div class="password-modal" id="passwordModal">
+        <div class="password-box">
+            <h2>Session Password Required</h2>
+            <p>This session is protected. Please enter the password to continue.</p>
+            <input type="password" id="sessionPassword" placeholder="Enter password" class="form-control">
+            <button class="btn" id="submitPasswordBtn" style="margin-top: 1rem;">Submit</button>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Initial View -->
         <div id="initialView">
@@ -354,6 +453,11 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="sessionPassword">Session Password (Optional)</label>
+                    <input type="password" id="sessionPasswordInput" placeholder="Leave empty for no password">
+                </div>
+                
+                <div class="form-group">
                     <label for="sessionDuration">Session Duration</label>
                     <select id="sessionDuration" required>
                         <option value="5">5 Minutes</option>
@@ -378,6 +482,17 @@
             <div class="session-link">
                 <span id="sessionLink"></span>
                 <button class="copy-btn" id="copyLinkBtn">Copy</button>
+            </div>
+            
+            <div class="extend-session" id="extendSession">
+                <p>Extend session duration:</p>
+                <select id="extendDuration">
+                    <option value="5">5 Minutes</option>
+                    <option value="15">15 Minutes</option>
+                    <option value="30">30 Minutes</option>
+                    <option value="60">1 Hour</option>
+                </select>
+                <button class="btn" id="extendSessionBtn" style="margin-top: 0.5rem;">Extend Session</button>
             </div>
             
             <div class="loader" id="sessionLoader"></div>
@@ -431,14 +546,17 @@
         <!-- Download Section (shown when session has ended) -->
         <div id="downloadSection" style="display: none;">
             <h1>Session Ended</h1>
-            <p>The contact collection session has ended. You can now download the VCF file containing all contacts.</p>
-            <button class="btn" id="downloadBtn">Download VCF File</button>
+            <p>The contact collection session has ended. You can now download the contact file.</p>
+            <button class="btn" id="downloadVcfBtn">Download VCF File</button>
+            <button class="btn btn-download" id="downloadCsvBtn">Download CSV File</button>
         </div>
         
         <div class="powered-by">
             Powered by The.Zane.Nelson
         </div>
     </div>
+
+    <textarea id="sessionDataInput" class="session-data-input"></textarea>
 
     <script>
         // DOM Elements
@@ -459,31 +577,64 @@
         const notification = document.getElementById('notification');
         const contactForm = document.getElementById('contactForm');
         const memberCount = document.getElementById('memberCount');
-        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadVcfBtn = document.getElementById('downloadVcfBtn');
+        const downloadCsvBtn = document.getElementById('downloadCsvBtn');
         const createSessionBtn = document.getElementById('createSessionBtn');
         const addContactBtn = document.getElementById('addContactBtn');
         const copyLinkBtn = document.getElementById('copyLinkBtn');
+        const whatsappFloatBtn = document.getElementById('whatsappFloatBtn');
+        const passwordModal = document.getElementById('passwordModal');
+        const submitPasswordBtn = document.getElementById('submitPasswordBtn');
+        const extendSession = document.getElementById('extendSession');
+        const extendSessionBtn = document.getElementById('extendSessionBtn');
+        const extendDuration = document.getElementById('extendDuration');
+        const sessionDataInput = document.getElementById('sessionDataInput');
 
         // Current session data
         let currentSession = null;
         let contacts = [];
         let timerInterval = null;
+        const WHATSAPP_LINK = "https://chat.whatsapp.com/YOUR_LINK_HERE";
 
         // Initialize the app
         function initApp() {
             // Check if there's a session in the URL
             const urlParams = new URLSearchParams(window.location.search);
             const sessionId = urlParams.get('session');
+            const sessionData = urlParams.get('data');
             
-            if (sessionId) {
-                // Load the session
+            if (sessionId && sessionData) {
+                // Decode and load the session from URL
+                try {
+                    currentSession = JSON.parse(decodeURIComponent(sessionData));
+                    
+                    // Check if password is required
+                    if (currentSession.password) {
+                        showPasswordModal();
+                        return;
+                    }
+                    
+                    // Check if session has ended
+                    if (Date.now() > currentSession.endTime) {
+                        showDownloadSection();
+                    } else {
+                        showContactForm();
+                        startTimer();
+                    }
+                } catch (e) {
+                    showMessage('Invalid session data', 'error', notification);
+                    setTimeout(() => {
+                        window.location.href = window.location.origin + window.location.pathname;
+                    }, 2000);
+                }
+            } else if (sessionId) {
+                // Try to load from localStorage as fallback
                 loadSession(sessionId);
             } else {
                 // Check if we're managing a session
                 const savedSession = localStorage.getItem('currentSession');
                 if (savedSession) {
                     currentSession = JSON.parse(savedSession);
-                    // showSessionResult();
                     initialView.style.display = 'block';
                 }
             }
@@ -516,11 +667,23 @@
                 }
             });
             
-            // Download button
-            downloadBtn.addEventListener('click', downloadVcf);
+            // Download buttons
+            downloadVcfBtn.addEventListener('click', downloadVcf);
+            downloadCsvBtn.addEventListener('click', downloadCsv);
             
             // Copy link button
             copyLinkBtn.addEventListener('click', copySessionLink);
+            
+            // WhatsApp float button
+            whatsappFloatBtn.addEventListener('click', function() {
+                window.open(WHATSAPP_LINK, '_blank');
+            });
+            
+            // Password submit button
+            submitPasswordBtn.addEventListener('click', checkPassword);
+            
+            // Extend session button
+            extendSessionBtn.addEventListener('click', extendCurrentSession);
         }
 
         // Validate session form
@@ -566,6 +729,7 @@
             const sessionName = document.getElementById('sessionName').value;
             const contactPrefix = document.getElementById('contactPrefix').value || '';
             const whatsappLink = document.getElementById('whatsappLink').value;
+            const password = document.getElementById('sessionPasswordInput').value;
             const duration = parseInt(document.getElementById('sessionDuration').value);
             
             // Generate a unique session ID
@@ -576,23 +740,29 @@
                 name: sessionName,
                 prefix: contactPrefix,
                 whatsapp: whatsappLink,
+                password: password || null,
                 duration: duration,
                 createdAt: Date.now(),
                 endTime: Date.now() + (duration * 60000),
                 contacts: []
             };
             
-            // Save to localStorage
+            // Save to localStorage (for creator)
             localStorage.setItem('currentSession', JSON.stringify(currentSession));
             localStorage.setItem(`session_${sessionId}`, JSON.stringify(currentSession));
             
-            // Generate the session link
-            const link = `${window.location.origin}${window.location.pathname}?session=${sessionId}`;
+            // Generate the session link with embedded data
+            const sessionData = encodeURIComponent(JSON.stringify(currentSession));
+            const link = `${window.location.origin}${window.location.pathname}?session=${sessionId}&data=${sessionData}`;
             sessionLink.textContent = link;
+            
+            // Also make the session data available for copying
+            sessionDataInput.value = JSON.stringify(currentSession, null, 2);
             
             // Show the result section
             sessionSetup.style.display = 'none';
             sessionResult.style.display = 'block';
+            extendSession.style.display = 'block';
             
             hideLoading(sessionLoader);
             showMessage('Session created successfully!', 'success', sessionMessage);
@@ -608,6 +778,12 @@
             if (savedSession) {
                 currentSession = JSON.parse(savedSession);
                 
+                // Check if password is required
+                if (currentSession.password) {
+                    showPasswordModal();
+                    return;
+                }
+                
                 // Check if session has ended
                 if (Date.now() > currentSession.endTime) {
                     showDownloadSection();
@@ -616,14 +792,75 @@
                     startTimer();
                 }
             } else {
-                // Session not found
-                showMessage('Session not found or has expired', 'error', notification);
-                setTimeout(() => {
-                    window.location.href = window.location.origin + window.location.pathname;
-                }, 2000);
+                // Session not found - try to get from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const sessionData = urlParams.get('data');
+                
+                if (sessionData) {
+                    try {
+                        currentSession = JSON.parse(decodeURIComponent(sessionData));
+                        
+                        if (Date.now() > currentSession.endTime) {
+                            showDownloadSection();
+                        } else {
+                            showContactForm();
+                            startTimer();
+                        }
+                    } catch (e) {
+                        showMessage('Session not found or has expired', 'error', notification);
+                        setTimeout(() => {
+                            window.location.href = window.location.origin + window.location.pathname;
+                        }, 2000);
+                    }
+                } else {
+                    showMessage('Session not found or has expired', 'error', notification);
+                    setTimeout(() => {
+                        window.location.href = window.location.origin + window.location.pathname;
+                    }, 2000);
+                }
             }
             
             hideLoading();
+        }
+
+        // Show password modal
+        function showPasswordModal() {
+            passwordModal.style.display = 'flex';
+        }
+
+        // Check password
+        function checkPassword() {
+            const enteredPassword = document.getElementById('sessionPassword').value;
+            
+            if (enteredPassword === currentSession.password) {
+                passwordModal.style.display = 'none';
+                
+                // Check if session has ended
+                if (Date.now() > currentSession.endTime) {
+                    showDownloadSection();
+                } else {
+                    showContactForm();
+                    startTimer();
+                }
+            } else {
+                showMessage('Incorrect password', 'error', document.querySelector('.password-box'));
+            }
+        }
+
+        // Extend current session
+        function extendCurrentSession() {
+            const extensionMinutes = parseInt(extendDuration.value);
+            currentSession.endTime += extensionMinutes * 60000;
+            currentSession.duration += extensionMinutes;
+            
+            // Update in storage
+            localStorage.setItem('currentSession', JSON.stringify(currentSession));
+            localStorage.setItem(`session_${currentSession.id}`, JSON.stringify(currentSession));
+            
+            // Update timer display
+            updateTimer();
+            
+            showMessage(`Session extended by ${extensionMinutes} minutes`, 'success', sessionMessage);
         }
 
         // Show session result
@@ -631,10 +868,15 @@
             initialView.style.display = 'none';
             sessionSetup.style.display = 'none';
             sessionResult.style.display = 'block';
+            extendSession.style.display = 'block';
             
-            // Generate the session link
-            const link = `${window.location.origin}${window.location.pathname}?session=${currentSession.id}`;
+            // Generate the session link with embedded data
+            const sessionData = encodeURIComponent(JSON.stringify(currentSession));
+            const link = `${window.location.origin}${window.location.pathname}?session=${currentSession.id}&data=${sessionData}`;
             sessionLink.textContent = link;
+            
+            // Also make the session data available for copying
+            sessionDataInput.value = JSON.stringify(currentSession, null, 2);
         }
 
         // Show contact form
@@ -762,6 +1004,30 @@
             const a = document.createElement('a');
             a.href = url;
             a.download = `${currentSession.name.replace(/[^a-z0-9]/gi, '_')}_contacts.vcf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            hideLoading();
+        }
+
+        // Download CSV file
+        function downloadCsv() {
+            showLoading();
+            
+            let csvContent = "Name,Phone\n";
+            
+            contacts.forEach(contact => {
+                csvContent += `"${contact.fullName}","${contact.phone}"\n`;
+            });
+            
+            // Create a blob and download it
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentSession.name.replace(/[^a-z0-9]/gi, '_')}_contacts.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
