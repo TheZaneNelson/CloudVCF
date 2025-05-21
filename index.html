@@ -550,6 +550,7 @@
             <button class="btn" id="downloadVcfBtn">Download VCF File</button>
             <button class="btn btn-download" id="downloadCsvBtn">Download CSV File</button>
         </div>
+        <button id="testBlobBtn" class="btn" style="margin-top: 1rem; background: #f72585;">Test Blob Connection</button>
         
         <div class="powered-by">
             Powered by The.Zane.Nelson
@@ -595,6 +596,198 @@
         let contacts = [];
         let timerInterval = null;
         const WHATSAPP_LINK = "https://chat.whatsapp.com/YOUR_LINK_HERE";
+
+        // Blob Storage API URL
+        const BLOB_API_URL = '/api/blob';
+
+         // Utility functions for Blob operations
+        async function blobOperation(action, sessionId, data = null) {
+        try {
+            const response = await fetch(BLOB_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, sessionId, data })
+            });
+            
+            if (!response.ok) throw new Error('Blob operation failed');
+            return await response.json();
+        } catch (error) {
+            console.error('Blob error:', error);
+            throw error;
+        }
+        }
+
+         // Modified createSession function
+        async function createSession() {
+        showLoading(sessionLoader);
+        
+        const sessionName = document.getElementById('sessionName').value;
+        const contactPrefix = document.getElementById('contactPrefix').value || '';
+        const whatsappLink = document.getElementById('whatsappLink').value;
+        const password = document.getElementById('sessionPasswordInput').value;
+        const duration = parseInt(document.getElementById('sessionDuration').value);
+        
+        const sessionId = generateId();
+        
+        currentSession = {
+            id: sessionId,
+            name: sessionName,
+            prefix: contactPrefix,
+            whatsapp: whatsappLink,
+            password: password || null,
+            duration: duration,
+            createdAt: Date.now(),
+            endTime: Date.now() + (duration * 60000),
+            contacts: []
+        };
+        
+        try {
+            // Save to Blob
+            const blobResult = await blobOperation('upload', sessionId, currentSession);
+            currentSession.blobUrl = blobResult.url;
+            
+            // Save to localStorage (for creator)
+            localStorage.setItem('currentSession', JSON.stringify(currentSession));
+            
+            // Generate the session link
+            const link = `${window.location.origin}${window.location.pathname}?session=${sessionId}`;
+            sessionLink.textContent = link;
+            
+            // Show the result section
+            sessionSetup.style.display = 'none';
+            sessionResult.style.display = 'block';
+            extendSession.style.display = 'block';
+            
+            showMessage('Session created successfully!', 'success', sessionMessage);
+        } catch (error) {
+            showMessage('Failed to create session in cloud', 'error', sessionMessage);
+            console.error('Session creation error:', error);
+        } finally {
+            hideLoading(sessionLoader);
+        }
+        }
+
+        // Modified loadSession function
+        async function loadSession(sessionId) {
+        showLoading();
+        
+        try {
+            // Try to load from Blob first
+            currentSession = await blobOperation('fetch', sessionId);
+            
+            if (currentSession) {
+            // Check if password is required
+            if (currentSession.password) {
+                showPasswordModal();
+                return;
+            }
+            
+            // Check if session has ended
+            if (Date.now() > currentSession.endTime) {
+                showDownloadSection();
+            } else {
+                showContactForm();
+                startTimer();
+            }
+            } else {
+            // Fallback to localStorage
+            const savedSession = localStorage.getItem(`session_${sessionId}`);
+            if (savedSession) {
+                currentSession = JSON.parse(savedSession);
+                
+                if (currentSession.password) {
+                showPasswordModal();
+                return;
+                }
+                
+                if (Date.now() > currentSession.endTime) {
+                showDownloadSection();
+                } else {
+                showContactForm();
+                startTimer();
+                }
+            } else {
+                showMessage('Session not found', 'error', notification);
+                setTimeout(() => {
+                window.location.href = window.location.origin + window.location.pathname;
+                }, 2000);
+            }
+            }
+        } catch (error) {
+            showMessage('Failed to load session', 'error', notification);
+            console.error('Session load error:', error);
+        } finally {
+            hideLoading();
+        }
+        }
+
+        // Modified addContact function
+        async function addContact() {
+        const fullName = currentSession.prefix + document.getElementById('fullName').value.trim();
+        const countryCode = document.getElementById('countryCode').value;
+        const phoneNumber = document.getElementById('phoneNumber').value.trim();
+        
+        if (!phoneNumber) {
+            showNotification('Please enter a phone number', 'error');
+            return;
+        }
+        
+        const phone = countryCode + phoneNumber;
+        if (currentSession.contacts.some(c => c.phone === phone)) {
+            showNotification('This contact already exists', 'error');
+            return;
+        }
+        
+        const contact = {
+            fullName,
+            phone,
+            addedAt: Date.now()
+        };
+        
+        currentSession.contacts.push(contact);
+        
+        try {
+            // Update in Blob
+            await blobOperation('upload', currentSession.id, currentSession);
+            
+            // Update in localStorage (for creator)
+            if (localStorage.getItem('currentSession')) {
+            localStorage.setItem('currentSession', JSON.stringify(currentSession));
+            }
+            
+            showNotification('Contact added successfully', 'success');
+            document.getElementById('fullName').value = '';
+            document.getElementById('phoneNumber').value = '';
+            updateMemberCount();
+        } catch (error) {
+            showNotification('Failed to save contact to cloud', 'error');
+            console.error('Contact save error:', error);
+        }
+        }
+
+            // Modified extendCurrentSession function
+        async function extendCurrentSession() {
+        const extensionMinutes = parseInt(extendDuration.value);
+        currentSession.endTime += extensionMinutes * 60000;
+        currentSession.duration += extensionMinutes;
+        
+        try {
+            // Update in Blob
+            await blobOperation('upload', currentSession.id, currentSession);
+            
+            // Update in localStorage (for creator)
+            if (localStorage.getItem('currentSession')) {
+            localStorage.setItem('currentSession', JSON.stringify(currentSession));
+            }
+            
+            updateTimer();
+            showMessage(`Session extended by ${extensionMinutes} minutes`, 'success', sessionMessage);
+        } catch (error) {
+            showMessage('Failed to extend session', 'error', sessionMessage);
+            console.error('Session extension error:', error);
+        }
+        }
+
 
         // Initialize the app
         function initApp() {
@@ -722,107 +915,7 @@
             return true;
         }
 
-        // Create a new session
-        function createSession() {
-            showLoading(sessionLoader);
-            
-            const sessionName = document.getElementById('sessionName').value;
-            const contactPrefix = document.getElementById('contactPrefix').value || '';
-            const whatsappLink = document.getElementById('whatsappLink').value;
-            const password = document.getElementById('sessionPasswordInput').value;
-            const duration = parseInt(document.getElementById('sessionDuration').value);
-            
-            // Generate a unique session ID
-            const sessionId = generateId();
-            
-            currentSession = {
-                id: sessionId,
-                name: sessionName,
-                prefix: contactPrefix,
-                whatsapp: whatsappLink,
-                password: password || null,
-                duration: duration,
-                createdAt: Date.now(),
-                endTime: Date.now() + (duration * 60000),
-                contacts: []
-            };
-            
-            // Save to localStorage (for creator)
-            localStorage.setItem('currentSession', JSON.stringify(currentSession));
-            localStorage.setItem(`session_${sessionId}`, JSON.stringify(currentSession));
-            
-            // Generate the session link with embedded data
-            const sessionData = encodeURIComponent(JSON.stringify(currentSession));
-            const link = `${window.location.origin}${window.location.pathname}?session=${sessionId}&data=${sessionData}`;
-            sessionLink.textContent = link;
-            
-            // Also make the session data available for copying
-            sessionDataInput.value = JSON.stringify(currentSession, null, 2);
-            
-            // Show the result section
-            sessionSetup.style.display = 'none';
-            sessionResult.style.display = 'block';
-            extendSession.style.display = 'block';
-            
-            hideLoading(sessionLoader);
-            showMessage('Session created successfully!', 'success', sessionMessage);
-        }
-
-        // Load a session
-        function loadSession(sessionId) {
-            showLoading();
-            
-            // Try to load from localStorage
-            const savedSession = localStorage.getItem(`session_${sessionId}`);
-            
-            if (savedSession) {
-                currentSession = JSON.parse(savedSession);
-                
-                // Check if password is required
-                if (currentSession.password) {
-                    showPasswordModal();
-                    return;
-                }
-                
-                // Check if session has ended
-                if (Date.now() > currentSession.endTime) {
-                    showDownloadSection();
-                } else {
-                    showContactForm();
-                    startTimer();
-                }
-            } else {
-                // Session not found - try to get from URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const sessionData = urlParams.get('data');
-                
-                if (sessionData) {
-                    try {
-                        currentSession = JSON.parse(decodeURIComponent(sessionData));
-                        
-                        if (Date.now() > currentSession.endTime) {
-                            showDownloadSection();
-                        } else {
-                            showContactForm();
-                            startTimer();
-                        }
-                    } catch (e) {
-                        showMessage('Session not found or has expired', 'error', notification);
-                        setTimeout(() => {
-                            window.location.href = window.location.origin + window.location.pathname;
-                        }, 2000);
-                    }
-                } else {
-                    showMessage('Session not found or has expired', 'error', notification);
-                    setTimeout(() => {
-                        window.location.href = window.location.origin + window.location.pathname;
-                    }, 2000);
-                }
-            }
-            
-            hideLoading();
-        }
-
+        
         // Show password modal
         function showPasswordModal() {
             passwordModal.style.display = 'flex';
@@ -845,22 +938,6 @@
             } else {
                 showMessage('Incorrect password', 'error', document.querySelector('.password-box'));
             }
-        }
-
-        // Extend current session
-        function extendCurrentSession() {
-            const extensionMinutes = parseInt(extendDuration.value);
-            currentSession.endTime += extensionMinutes * 60000;
-            currentSession.duration += extensionMinutes;
-            
-            // Update in storage
-            localStorage.setItem('currentSession', JSON.stringify(currentSession));
-            localStorage.setItem(`session_${currentSession.id}`, JSON.stringify(currentSession));
-            
-            // Update timer display
-            updateTimer();
-            
-            showMessage(`Session extended by ${extensionMinutes} minutes`, 'success', sessionMessage);
         }
 
         // Show session result
@@ -934,48 +1011,6 @@
             const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
             
             countdown.textContent = `${hours}h ${minutes}m ${seconds}s remaining`;
-        }
-
-        // Add a contact
-        function addContact() {
-            const fullName = currentSession.prefix + document.getElementById('fullName').value.trim();
-            const countryCode = document.getElementById('countryCode').value;
-            const phoneNumber = document.getElementById('phoneNumber').value.trim();
-            
-            // Validate phone number
-            if (!phoneNumber) {
-                showNotification('Please enter a phone number', 'error');
-                return;
-            }
-            
-            // Check if contact already exists
-            const phone = countryCode + phoneNumber;
-            if (currentSession.contacts.some(c => c.phone === phone)) {
-                showNotification('This contact already exists', 'error');
-                return;
-            }
-            
-            // Add contact
-            const contact = {
-                fullName,
-                phone,
-                addedAt: Date.now()
-            };
-            
-            currentSession.contacts.push(contact);
-            
-            // Update session in storage
-            localStorage.setItem(`session_${currentSession.id}`, JSON.stringify(currentSession));
-            
-            // Show success
-            showNotification('Contact added successfully', 'success');
-            
-            // Clear form
-            document.getElementById('fullName').value = '';
-            document.getElementById('phoneNumber').value = '';
-            
-            // Update member count
-            updateMemberCount();
         }
 
         // Update member count display
@@ -1083,6 +1118,48 @@
 
         // Initialize the app when the DOM is loaded
         document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+    <script>
+        // Add to your event listeners
+document.getElementById('testBlobBtn').addEventListener('click', testBlobConnection);
+
+async function testBlobConnection() {
+  showLoading();
+  try {
+    const testData = { 
+      test: "connection", 
+      timestamp: Date.now() 
+    };
+    
+    // Test upload
+    const uploadResult = await blobOperation(
+      'upload', 
+      'connection_test', 
+      testData
+    );
+    
+    // Test download
+    const downloadResult = await blobOperation(
+      'fetch', 
+      'connection_test'
+    );
+    
+    if (downloadResult && downloadResult.test === "connection") {
+      showMessage('Blob connection successful!', 'success', sessionMessage);
+      console.log('Blob test successful:', {
+        upload: uploadResult,
+        download: downloadResult
+      });
+    } else {
+      throw new Error('Download test failed');
+    }
+  } catch (error) {
+    showMessage('Blob connection failed', 'error', sessionMessage);
+    console.error('Blob test failed:', error);
+  } finally {
+    hideLoading();
+  }
+}
     </script>
 </body>
 </html>
